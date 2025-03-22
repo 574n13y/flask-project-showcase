@@ -1,7 +1,13 @@
 from flask import Flask, render_template, request, jsonify, abort
 import datetime
+import os
+from config import config
 
 app = Flask(__name__)
+
+# Configure app based on environment
+env = os.environ.get('FLASK_ENV', 'default')
+app.config.from_object(config[env])
 
 # Sample data - in a real app, this would typically come from a database
 items = [
@@ -150,7 +156,6 @@ items = [
 def filter_items(items_list, search_query=None, category=None):
     """Filter items based on search query and category"""
     filtered = items_list
-
     if search_query:
         search_query = search_query.lower()
         filtered = [
@@ -158,25 +163,16 @@ def filter_items(items_list, search_query=None, category=None):
             if search_query in item['title'].lower() 
             or search_query in item['description'].lower()
         ]
-
     if category:
         filtered = [
             item for item in filtered
             if item['category'].lower() == category.lower()
         ]
-
     return filtered
-
-@app.errorhandler(404)
-def not_found_error(error):
-    return render_template('404.html'), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    return render_template('500.html'), 500
 
 @app.route('/')
 def home():
+    """Home page route"""
     search_query = request.args.get('search', '').strip()
     category = request.args.get('category')
     
@@ -194,6 +190,7 @@ def home():
 
 @app.route('/about')
 def about():
+    """About page route"""
     return render_template('about.html')
 
 @app.route('/contact', methods=['POST'])
@@ -210,6 +207,12 @@ def get_projects():
     filtered_items = filter_items(items, search_query, category)
     return jsonify({'projects': filtered_items})
 
+@app.route('/api/categories')
+def get_categories():
+    """API endpoint to get all unique categories"""
+    categories = sorted(set(item['category'] for item in items))
+    return jsonify({'categories': categories})
+
 @app.route('/api/projects/<int:project_id>')
 def get_project(project_id):
     """API endpoint to get a specific project"""
@@ -218,11 +221,17 @@ def get_project(project_id):
         abort(404)
     return jsonify({'project': project})
 
-@app.route('/api/categories')
-def get_categories():
-    """API endpoint to get all unique categories"""
-    categories = sorted(set(item['category'] for item in items))
-    return jsonify({'categories': categories})
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return render_template('500.html'), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Use environment variables for configuration
+    port = int(os.environ.get('PORT', 5000))
+    # Default to localhost for security, allow override via environment
+    host = os.environ.get('HOST', '127.0.0.1')  # Default to localhost
+    app.run(host=host, port=port)  # Debug mode is set via config
