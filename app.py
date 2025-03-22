@@ -173,35 +173,43 @@ def filter_items(items_list, search_query=None, category=None):
 @app.route('/')
 def home():
     """Home page route"""
-    search_query = request.args.get('search', '')
-    current_category = request.args.get('category', '')
+    search_query = request.args.get('search', '').strip()
+    category = request.args.get('category')
     
-    filtered_items = filter_items(items, search_query, current_category)
+    # Get unique categories for the filter dropdown
     categories = sorted(set(item['category'] for item in items))
     
+    # Filter items based on search and category
+    filtered_items = filter_items(items, search_query, category)
+    
     return render_template('index.html', 
-                         items=filtered_items,
+                         items=filtered_items, 
                          categories=categories,
-                         search_query=search_query,
-                         current_category=current_category)
+                         current_category=category,
+                         search_query=search_query)
 
 @app.route('/about')
 def about():
     """About page route"""
     return render_template('about.html')
 
+@app.route('/contact', methods=['POST'])
+def contact():
+    # For now, we'll just return a success message
+    return jsonify({'status': 'success', 'message': 'Thank you for your message!'})
+
 @app.route('/api/projects')
 def get_projects():
-    """API endpoint to get filtered projects"""
-    search_query = request.args.get('search', '')
-    category = request.args.get('category', '')
+    """API endpoint to get all projects"""
+    search_query = request.args.get('search', '').strip()
+    category = request.args.get('category')
     
     filtered_items = filter_items(items, search_query, category)
     return jsonify({'projects': filtered_items})
 
 @app.route('/api/categories')
 def get_categories():
-    """API endpoint to get unique categories"""
+    """API endpoint to get all unique categories"""
     categories = sorted(set(item['category'] for item in items))
     return jsonify({'categories': categories})
 
@@ -215,12 +223,10 @@ def get_project(project_id):
 
 @app.errorhandler(404)
 def not_found_error(error):
-    """404 error handler"""
     return render_template('404.html'), 404
 
 @app.errorhandler(500)
 def internal_error(error):
-    """500 error handler"""
     return render_template('500.html'), 500
 
 if __name__ == '__main__':
