@@ -226,4 +226,6 @@ def internal_error(error):
 if __name__ == '__main__':
     # Use environment variables for configuration
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)  # Debug mode is set via config
+    # Default to localhost for security, allow override via environment
+    host = os.environ.get('HOST', '127.0.0.1')  # Default to localhost
+    app.run(host=host, port=port)  # Debug mode is set via config
