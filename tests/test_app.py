@@ -1,10 +1,17 @@
+import os
 import pytest
 from app import app, items
 
 @pytest.fixture
 def client():
+    # Configure app for testing
     app.config['TESTING'] = True
     app.config['SERVER_NAME'] = 'localhost'
+    
+    # Set template folder to test templates
+    template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+    app.template_folder = template_dir
+    
     with app.test_client() as client:
         with app.app_context():
             yield client
@@ -14,6 +21,12 @@ def test_home_page(client):
     rv = client.get('/')
     assert rv.status_code == 200
     assert b'Project Showcase' in rv.data
+
+def test_about_page(client):
+    """Test that about page loads successfully"""
+    rv = client.get('/about')
+    assert rv.status_code == 200
+    assert b'About Project Showcase' in rv.data
 
 def test_api_projects(client):
     """Test the projects API endpoint"""
@@ -27,6 +40,7 @@ def test_404_handling(client):
     """Test 404 error handling"""
     rv = client.get('/nonexistent-page')
     assert rv.status_code == 404
+    assert b'Page Not Found' in rv.data
 
 def test_category_filter(client):
     """Test category filtering"""
@@ -60,3 +74,17 @@ def test_categories_endpoint(client):
     # Verify categories are unique
     categories = json_data['categories']
     assert len(categories) == len(set(categories))
+
+def test_empty_search_results(client):
+    """Test search with no results"""
+    rv = client.get('/api/projects?search=nonexistentproject123456')
+    assert rv.status_code == 200
+    json_data = rv.get_json()
+    assert len(json_data['projects']) == 0
+
+def test_invalid_category(client):
+    """Test filtering with invalid category"""
+    rv = client.get('/api/projects?category=nonexistentcategory123456')
+    assert rv.status_code == 200
+    json_data = rv.get_json()
+    assert len(json_data['projects']) == 0
