@@ -147,6 +147,26 @@ items = [
     }
 ]
 
+def filter_items(items_list, search_query=None, category=None):
+    """Filter items based on search query and category"""
+    filtered = items_list
+
+    if search_query:
+        search_query = search_query.lower()
+        filtered = [
+            item for item in filtered
+            if search_query in item['title'].lower() 
+            or search_query in item['description'].lower()
+        ]
+
+    if category:
+        filtered = [
+            item for item in filtered
+            if item['category'].lower() == category.lower()
+        ]
+
+    return filtered
+
 @app.errorhandler(404)
 def not_found_error(error):
     return render_template('404.html'), 404
@@ -157,17 +177,20 @@ def internal_error(error):
 
 @app.route('/')
 def home():
-    search_query = request.args.get('search', '').lower()
-    category = request.args.get('category', '')
+    search_query = request.args.get('search', '').strip()
+    category = request.args.get('category')
     
-    filtered_items = items
-    if search_query:
-        filtered_items = [item for item in items if search_query in item['title'].lower() or search_query in item['description'].lower()]
-    if category:
-        filtered_items = [item for item in filtered_items if item['category'].lower() == category.lower()]
-    
+    # Get unique categories for the filter dropdown
     categories = sorted(set(item['category'] for item in items))
-    return render_template('index.html', items=filtered_items, categories=categories)
+    
+    # Filter items based on search and category
+    filtered_items = filter_items(items, search_query, category)
+    
+    return render_template('index.html', 
+                         items=filtered_items, 
+                         categories=categories,
+                         current_category=category,
+                         search_query=search_query)
 
 @app.route('/about')
 def about():
@@ -175,18 +198,16 @@ def about():
 
 @app.route('/contact', methods=['POST'])
 def contact():
-    data = request.form
-    # In a real application, you would process the contact form data here
     # For now, we'll just return a success message
     return jsonify({'status': 'success', 'message': 'Thank you for your message!'})
 
 @app.route('/api/projects')
 def get_projects():
     """API endpoint to get all projects"""
+    search_query = request.args.get('search', '').strip()
     category = request.args.get('category')
-    filtered_items = items
-    if category:
-        filtered_items = [item for item in items if item['category'].lower() == category.lower()]
+    
+    filtered_items = filter_items(items, search_query, category)
     return jsonify({'projects': filtered_items})
 
 @app.route('/api/projects/<int:project_id>')
@@ -196,6 +217,12 @@ def get_project(project_id):
     if project is None:
         abort(404)
     return jsonify({'project': project})
+
+@app.route('/api/categories')
+def get_categories():
+    """API endpoint to get all unique categories"""
+    categories = sorted(set(item['category'] for item in items))
+    return jsonify({'categories': categories})
 
 if __name__ == '__main__':
     app.run(debug=True)
