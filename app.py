@@ -1,13 +1,13 @@
 from flask import Flask, render_template, request, jsonify, abort
 import datetime
 import os
+from config import config
 
 app = Flask(__name__)
 
 # Configure app based on environment
-if os.environ.get('FLASK_ENV') == 'testing':
-    app.config['TESTING'] = True
-    app.config['WTF_CSRF_ENABLED'] = False
+env = os.environ.get('FLASK_ENV', 'default')
+app.config.from_object(config[env])
 
 # Sample data - in a real app, this would typically come from a database
 items = [
@@ -224,4 +224,6 @@ def internal_error(error):
     return render_template('500.html'), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Use environment variables for configuration
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)  # Debug mode is set via config
